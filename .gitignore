@@ -1,0 +1,24 @@
+**/.gradle
+/out
+/qautomation-plugins.iws
+**/build
+**/MANIFEST.MF
+
+# intellij
+qautomation-plugins.iml
+qautomation-plugins.ipr
+**/*.iml
+
+# eclipse files
+**.classpath
+**.project
+**.springBeans
+**/.settings
+**/.settings/*
+*/build.gradle
+
+**/target
+sonar-project.properties
+/build/
+.gradle
+bin
