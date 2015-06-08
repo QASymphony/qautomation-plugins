@@ -1,0 +1,222 @@
+// repositories
+buildscript {
+  ext.springRepo = 'http://repo.spring.io/libs-release'
+  ext.mavenRepo = 'http://repo1.maven.org/maven2'
+  ext.apacheSnapshotsRepo = 'http://repository.apache.org/snapshots'
+
+  repositories {
+    maven { url springRepo }
+    maven { url mavenRepo }
+    maven { url apacheSnapshotsRepo }
+    jcenter()
+  }
+}
+
+// configure project.
+configure(allprojects) {
+  group = 'com.qasymphony.qtest.automation'
+  version = '1.0.0'
+
+  // dependencies version
+  ext.JavaLangVersion = '1.7'
+  ext.SpringVersion = '4.1.2.RELEASE'
+  ext.HttpClientVersion = '3.1'
+  ext.Log4jVersion = '1.2.17'
+  ext.FelixVersion = '4.6.0'
+  ext.Slf4jVersion = '1.7.7'
+  ext.JacksonVersion = '2.5.1'
+  ext.ServletVersion = '3.1.0'
+  ext.JettyVersion = '9.2.9.v20150224'
+  ext.H2Version = '1.4.186'
+  ext.MetricsVersion = '3.0.2'
+  ext.HealthChecksVersion = '3.0.2'
+  ext.VelocityVersion = '1.7'
+  ext.HibernateVersion = '4.3.8.Final'
+  ext.BcelVersion='6.0-SNAPSHOT'
+  ext.ActiveMQVersion='5.7.0'
+  ext.QuartzVersion='2.2.1'
+
+  ext.gradleScriptDir = "${rootProject.rootDir}/gradle"
+
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+  apply plugin: 'java'
+
+  compileJava.options*.compilerArgs = [
+      "-Xlint:serial", "-Xlint:varargs", "-Xlint:cast", "-Xlint:classfile",
+      "-Xlint:dep-ann", "-Xlint:divzero", "-Xlint:empty", "-Xlint:finally",
+      "-Xlint:overrides", "-Xlint:path", "-Xlint:processing", "-Xlint:static",
+      "-Xlint:try", "-Xlint:fallthrough", "-Xlint:rawtypes", /*"-Xlint:deprecation",*/
+      "-Xlint:unchecked", "-Xlint:-options"/*, "-Werror" */, "-g:none"
+  ]
+
+  compileTestJava.options*.compilerArgs = [
+      "-Xlint:serial", "-Xlint:varargs", "-Xlint:cast", "-Xlint:classfile",
+      "-Xlint:dep-ann", "-Xlint:divzero", "-Xlint:empty", "-Xlint:finally",
+      "-Xlint:overrides", "-Xlint:path", "-Xlint:processing", "-Xlint:static",
+      "-Xlint:try", "-Xlint:-fallthrough", "-Xlint:-rawtypes", "-Xlint:-deprecation",
+      "-Xlint:-unchecked", "-Xlint:-options"
+  ]
+
+  // set compile java compatibilites.
+  compileJava {
+    targetCompatibility = JavaLangVersion
+    sourceCompatibility = JavaLangVersion
+  }
+
+  compileTestJava {
+    targetCompatibility = 1.7
+    sourceCompatibility = 1.7
+    // options.compilerArgs += "-parameters"
+  }
+
+  idea.module {
+    excludeDirs += [
+        file('bin'),
+        // containing build artifacts from Eclipse (if any)
+        file('.settings')   // containing intentionally checked-in Eclipse metadata
+    ]
+  }
+}
+
+// configure root project.
+configure(rootProject) {
+//  apply plugin: 'net.saliman.cobertura'
+  apply from: 'gradle/gitMetadata.gradle'
+
+  configurations.archives.artifacts.clear()
+
+  idea.project {
+    languageLevel = JavaLangVersion
+    ipr {
+      withXml { provider ->
+        def mapping = provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping
+        mapping.@vcs = 'Git'
+        mapping.@directory = '$PROJECT_DIR$'
+      }
+    }
+  }
+}
+
+// configure java project.
+configure(subprojects) {
+  apply plugin: 'java'
+
+  repositories {
+    maven { url springRepo }
+    maven { url mavenRepo }
+    maven { url apacheSnapshotsRepo }
+    flatDir name: 'automation-sdk', dirs: "$rootDir/libs"
+  }
+
+  sourceSets {
+    integTest {
+      java.srcDir file('src/itest/java')
+      resources.srcDir file('src/itest/resources')
+    }
+  }
+
+  task integTest(type: Test) {
+    testClassesDir = sourceSets.integTest.output.classesDir
+    classpath = sourceSets.integTest.runtimeClasspath
+  }
+
+  sourceSets.test.resources.srcDirs = [
+    'src/test/java',
+    'src/test/resources'
+  ]
+
+  test {
+    systemProperty('java.awt.headless', 'true')
+    scanForTestClasses = false
+    include '**/*Tests.*'
+    exclude '**/Abstract*.*'
+  }
+
+  configurations {
+    pluginLibs
+  }
+
+  dependencies {
+    // commons dependency
+		pluginLibs "log4j:log4j:${Log4jVersion}"
+		pluginLibs "org.apache.bcel:bcel:${BcelVersion}"
+    pluginLibs 'commons-io:commons-io:2.4'
+    pluginLibs 'commons-codec:commons-codec:1.10'
+		pluginLibs 'commons-lang:commons-lang:2.6'
+		pluginLibs ':agent-base:1.0.0'
+		pluginLibs ':agent-plugin-access:'
+		pluginLibs ':qtest-sdk-java:1.1.3'
+		pluginLibs 'commons-logging:commons-logging:1.1.3'
+		pluginLibs "com.fasterxml.jackson.core:jackson-annotations:${JacksonVersion}"
+		compile ':agent-plugin-api:1.0.0'
+
+    testCompile 'junit:junit:4.11'
+    testCompile ':junit-ext:1.0'
+    testCompile "org.springframework:spring-test:${SpringVersion}"
+    testCompile 'org.hamcrest:hamcrest-library:1.3'
+
+    testCompile ('org.mockito:mockito-core:1.10.8') {
+      exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+		
+		configurations.compile.extendsFrom(configurations.pluginLibs)
+  }
+
+  // Ensure that all Gradle-compiled classes are available to Eclipse's classpath
+  eclipseClasspath.dependsOn testClasses
+
+  // Skip generation and removal of .settings/org.eclipse.jdt.core.prefs files during
+  // the normal `gradle eclipse` / `gradle cleanEclipse` lifecycle, as these files have
+  // been checked in with formatting settings imported from style/qtest-format.xml and
+  // style/qtest.importerorder.
+  eclipseJdt.onlyIf { false }
+  cleanEclipseJdt.onlyIf { false }
+}
+
+// project testng-plugin
+project('testng-plugin') {
+
+  dependencies {
+    pluginLibs 'org.testng:testng:6.8.21'
+    configurations.compile.extendsFrom(configurations.pluginLibs)
+  }
+
+  jar {
+    into('lib') {
+      from configurations.pluginLibs
+    }
+
+    manifest {
+      attributes(
+          'Build-By': 'qTest System',
+          'Implementation-Title': 'qTest - QASymphony LLLC',
+          'Implementation-Version': project.version,
+          'qTest-Version': '5.0.0'
+      )
+    }
+  }
+
+  defaultTasks 'jar'
+}
+
+// project testng-plugin-log-collector
+project('testng-plugin-log-collector') {
+  dependencies {
+    compile 'org.testng:testng:6.8.21'
+  }
+
+  jar {
+    archiveName = 'testng-plugin-log-collector.jar'
+
+    manifest {
+      attributes(
+          'Build-By': 'qTest System',
+          'Implementation-Title': 'qTest - QASymphony LLLC',
+          'Implementation-Version': project.version
+      )
+    }
+  }
+
+  defaultTasks 'jar'
+}

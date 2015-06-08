@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<qautomation-plugin id="testng-plugin" version="1.0.0">
+  <about>
+    <name>TestNG Agent Plugin</name>
+    <version>1.0.0</version>
+    <target-version>5.0.0</target-version>
+    <description>Support running TestNG with qTest Automation</description>
+    <vendor>
+      <name>QASymphony</name>
+      <url>https://www.qasymphony.com</url>
+    </vendor>
+    <target-os>
+      <value>Linux</value>
+      <value>Windows</value>
+      <value>Mac OS X</value>
+    </target-os>
+  </about>
+</qautomation-plugin>

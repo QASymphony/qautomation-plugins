@@ -1,0 +1,4 @@
+rootProject.name = 'qautomation-plugins'
+
+include 'testng-plugin'
+include 'testng-plugin-log-collector'
