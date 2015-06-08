@@ -31,16 +31,14 @@ import com.qasymphony.qtest.automation.util.scanner.BCELClassScanner;
  *
  */
 public class TestNGClassScanner extends BCELClassScanner {
-  
+  //~ class properties ========================================================
+  private final String TESTNG_ANNOTATION_CLASS_NAME = "org.testng.annotations.Test";
+
+  //~ class members ===========================================================
   public TestNGClassScanner(File templateDir) {
     super(templateDir);
   }
 
-
-
-
-  private final String TESTNG_ANNOTATION_CLASS_NAME = "org.testng.annotations.Test";
-  
   @Override
   protected boolean isTestMethod(JavaClass clazz, Method method) {
     Set<String> annotations = getMethodAnnotation(method);
@@ -220,8 +218,7 @@ public class TestNGClassScanner extends BCELClassScanner {
     return new ArrayList<TestCase>(testCases.values());
   }
   
-  private  boolean match(String text, String pattern)
-  {
+  private  boolean match(String text, String pattern) {
     return text.matches(pattern.replace("?", ".?").replace("*", ".*?"));
   }
 }

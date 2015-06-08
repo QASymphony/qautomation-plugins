@@ -18,6 +18,9 @@ import com.qasymphony.qtest.automation.plugin.api.response.QAutomationPluginApiR
 import com.qasymphony.qtest.automation.testng.core.TestNGClassScanner;
 import com.qasymphony.qtest.automation.testng.core.TestNgCommandBuilder;
 import com.qasymphony.qtest.automation.util.SystemEnvironment;
+import com.qasymphony.qtest.automation.util.validators.FileValidator;
+import com.qasymphony.qtest.automation.util.validators.Validation;
+import com.qasymphony.qtest.automation.util.validators.Validator;
 import org.apache.commons.io.FilenameUtils;
 import org.qas.api.internal.util.json.JsonArray;
 import org.qas.api.internal.util.json.JsonException;
@@ -47,7 +50,7 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
   public static final String REQUEST_PLUGIN_CONFIGURATION = "agent.atm.plugin-configuration";
   public static final String REQUEST_SCAN_TESTCASE = "agent.atm.scan-testcase";
   public static final String REQUEST_BUILD_COMMAND = "agent.atm.build-command";
-  public static final String REQUEST_COLLECT_TESTLOGS = "agent.atm.collect-testlogs";
+  public static final String REQUEST_COLLECT_TESTLOGS = "agent.atm.collect-testlog";
 
   private static final List<String> supportedVersions = Arrays.asList("1.0");
 
@@ -73,7 +76,23 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
    */
   @Load
   public void onLoad(PluginContext context) {
-    LOG.warn("[TestNG Plugin] Load plugin ...");
+    LOG.info(format("[TestNG Plugin] Loading plugin ..."));
+    final Validation validation = new Validation();
+
+    // create validator.
+    Validator validator = FileValidator.defaultFile(
+      "lib/testng-plugin-log-collector.jar",
+      "lib/testng-plugin-log-collector.jar",
+      true
+    );
+    validator.validate(validation);
+
+    if (!validation.isSuccessful()) {
+      LOG.warn("[TestNG Plugin] error occurs during copying resource.");
+      validation.logErrors();
+    }
+
+    LOG.info(format("[TestNG Plugin] Loaded."));
   }
 
   /**
@@ -81,7 +100,20 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
    */
   @UnLoad
   public void onUnLoad(PluginContext context) {
-    LOG.warn("[TestNG Plugin] UnLoad plugin ...");
+    LOG.info(format("[TestNG Plugin] Unloading plugin ..."));
+
+    // get destination file.
+    File destinationFile = FileValidator.defaultFile(
+      "lib/testng-plugin-log-collector.jar",
+      "lib/testng-plugin-log-collector.jar",
+      false
+    ).getDestinationFile();
+
+    if (destinationFile != null && destinationFile.exists()) {
+      destinationFile.delete();
+    }
+
+    LOG.info(format("[TestNG Plugin] UnLoaded."));
   }
 
   @Override

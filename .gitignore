@@ -1,12 +1,12 @@
 **/.gradle
 /out
-/qautomation-plugins.iws
 **/build
 **/MANIFEST.MF
 
 # intellij
 qautomation-plugins.iml
 qautomation-plugins.ipr
+qautomation-plugins.iws
 **/*.iml
 
 # eclipse files

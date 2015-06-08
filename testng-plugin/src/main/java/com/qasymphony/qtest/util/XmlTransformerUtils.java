@@ -4,8 +4,7 @@ import java.io.StringReader;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.qasymphony.qtest.automation.plugin.api.logging.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -13,7 +12,8 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 public class XmlTransformerUtils {
-  
+  //~ class properties ========================================================
+  private static final Logger logger = Logger.getLogger(XmlTransformerUtils.class);
   public static final String XML_ELEMENT_SUITE = "suite";
   public static final String XML_ATTRIBUTE_NAME = "name";
   public static final String XML_ELEMENT_TEST = "test";
@@ -24,9 +24,8 @@ public class XmlTransformerUtils {
   public static final String XML_ELEMENT_EXCLUDE = "exclude";
   public static final String XML_ELEMENT_PACKAGE = "package";
   public static final String XML_ELEMENT_GROUP = "groups";
-  
-  private static final Log logger = LogFactory.getLog(XmlTransformerUtils.class.getName());
 
+  //~ class members ===========================================================
   public static Node transformXmlStringToTestElement(String xml) {
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     DocumentBuilder builder;
@@ -42,7 +41,7 @@ public class XmlTransformerUtils {
 
       return null;
     } catch (Exception ex) {
-      logger.error("Error while transforming xml string to test element.", ex);
+      logger.warn("Error while transforming xml string to test element.", ex);
       return null;
     }
   }
@@ -76,7 +75,7 @@ public class XmlTransformerUtils {
       
       return testEle;
     } catch (Exception ex) {
-      logger.error("Error while transforming automation content to test element ", ex);
+      logger.warn("Error while transforming automation content to test element ", ex);
       return null;
     }
   }

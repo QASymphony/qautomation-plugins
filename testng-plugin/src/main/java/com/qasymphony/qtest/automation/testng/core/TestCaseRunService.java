@@ -32,15 +32,16 @@ import com.qasymphony.qtest.automation.util.DirectoryScanner;
 import com.qasymphony.qtest.util.XmlTransformerUtils;
 
 public class TestCaseRunService {
-
+  //~ class members ===========================================================
   /**
-   * generate new testNG xml file in targetPath Directory
+   * Generate new testNG xml file in targetPath Directory
    * 
-   * @param testRuns
-   * @param targetPath
-   * @throws ParserConfigurationException
-   * @throws TransformerException
-   * @return Xml File Path
+   * @param contentSets the set of automation content (Java TestCase class)
+   * @param targetPath the target path.
+   *
+   * @throws ParserConfigurationException if an error occurs during parsing XML.
+   * @throws TransformerException if an error occurs during generate XML file.
+   * @return The TestNG XML file.
    */
   public String generateTestNGXml(Set<String> contentSets, String targetPath) throws ParserConfigurationException,
       TransformerException {
@@ -76,30 +77,36 @@ public class TestCaseRunService {
   }
 
   /**
-   * generate new testNG xml to targetPath Directory from exist xml file
+   * Generate TestNG XML file based on existing file. This method will parse and collect
+   * the configuration in existing TestNG XML, remove un-necessary tag and append the
+   * needed test into XML file.
    * 
-   * @param testCases
-   * @param sourceXmlPath
-   *          source xml file
-   * @param targetPath
-   * @throws ParserConfigurationException
-   * @throws SAXException
-   * @throws IOException
-   * @throws TransformerException
-   * @return xml file path
+   * @param contentSets the given set of automation test content (Java Test class)
+   * @param sourceXmlPath the source XML path.
+   * @param targetPath the target directory where the new TestNG XML place.
+   *
+   * @throws ParserConfigurationException if an error occurs during parsing existing XML.
+   * @throws SAXException if an error occurs during constructing SAX engine.
+   * @throws IOException if an error occurs during reading existing XML.
+   * @throws TransformerException if an error occurs during generate XML file.
+   * @return The new TestNG XML file.
    */
   public String generateTestNGXml(Set<String> contentSets, String sourceXmlPath, String targetPath)
       throws ParserConfigurationException, SAXException, IOException, TransformerException {
-    if ((new File(sourceXmlPath)).length() == 0) {
+    File xmlSourceFile = new File(sourceXmlPath);
+
+    // the source file may not be existed or empty, so generate new file.
+    if (!xmlSourceFile.exists() || xmlSourceFile.length() == 0) {
       return generateTestNGXml(contentSets, targetPath);
     }
+
+    // generate the TestNG XML based on existing file.
     DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
     docFactory.setIgnoringComments(true);
     docFactory.setValidating(false);
     docFactory.setIgnoringElementContentWhitespace(true);
     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-    Document doc = docBuilder.parse(sourceXmlPath);
+    Document doc = docBuilder.parse(xmlSourceFile);
 
     // build set of run class
     Map<String, Set<String>> classSets = new HashMap<>();
@@ -228,5 +235,4 @@ public class TestCaseRunService {
     transformer.transform(source, result);
     return xmlFile.toString();
   }
-
 }
