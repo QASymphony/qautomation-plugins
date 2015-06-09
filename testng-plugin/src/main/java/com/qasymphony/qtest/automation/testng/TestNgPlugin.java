@@ -21,10 +21,11 @@ import com.qasymphony.qtest.automation.util.SystemEnvironment;
 import com.qasymphony.qtest.automation.util.validators.FileValidator;
 import com.qasymphony.qtest.automation.util.validators.Validation;
 import com.qasymphony.qtest.automation.util.validators.Validator;
-import org.apache.commons.io.FilenameUtils;
 import org.qas.api.internal.util.json.JsonArray;
 import org.qas.api.internal.util.json.JsonException;
 import org.qas.api.internal.util.json.JsonObject;
+
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.util.*;
@@ -51,6 +52,7 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
   public static final String REQUEST_SCAN_TESTCASE = "agent.atm.scan-testcase";
   public static final String REQUEST_BUILD_COMMAND = "agent.atm.build-command";
   public static final String REQUEST_COLLECT_TESTLOGS = "agent.atm.collect-testlog";
+	public static final String REQUEST_CLEANUP_ENVIRONMENT = "agent.atm.cleanup-environment";
 
   private static final List<String> supportedVersions = Arrays.asList("1.0");
 
@@ -69,6 +71,7 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
     messageHandlerMap.put(REQUEST_SCAN_TESTCASE, scanTestCasesMessageHandler());
     messageHandlerMap.put(REQUEST_BUILD_COMMAND, buildCommandMessageHandler());
     messageHandlerMap.put(REQUEST_COLLECT_TESTLOGS, collectTestLogsMessageHandler());
+		messageHandlerMap.put(REQUEST_CLEANUP_ENVIRONMENT, cleanupEnvironmentMessageHandler());
   }
 
   /**
@@ -155,6 +158,48 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
       }
     };
   }
+	
+  /**
+   * @return the cleanup environment message handler.
+   */
+  MessageHandler cleanupEnvironmentMessageHandler() {
+    return new MessageHandler() {
+			@SuppressWarnings({"unchecked"})
+      @Override
+      public QAutomationPluginApiResponse handle(QAutomationPluginApiRequest request) {
+				LOG.info(format("[TestNG Plugin] handle cleanup environment request with message: %s", request.requestBody()));
+				try {
+					if (request.requestBody() != null) {
+						JsonObject cleanupJson = new JsonObject(request.requestBody());
+						
+						BuildCommandRequest buildCommand = new BuildCommandRequest();
+						JsonObject commandRequestJson = cleanupJson.optJsonObject("command_request");
+						if (commandRequestJson != null) {
+							buildCommand = buildCommand.fromJson(commandRequestJson);
+						}
+						
+						// create map of environment.
+						JsonObject environmentJson = cleanupJson.optJsonObject("environments");
+						Map<String, String> environmentVariables = new HashMap<>();
+						if (environmentJson != null && environmentJson.length() > 0) {
+							Iterator<String> keyIt = (Iterator<String>) environmentJson.keys();
+							while (keyIt.hasNext()) {
+								String key = keyIt.next();
+								environmentVariables.put(key, environmentJson.optString(key));
+							}
+						}
+						
+						// cleanup environment.
+						testNgCommandBuilder.cleanupEnvironment(buildCommand, environmentVariables);
+					}
+				} catch (Exception e) {
+          LOG.warn(format("[TestNG Plugin] Error occurs during cleanup environment. Message: %s", e.getMessage()));
+				}
+				
+        return success("{}");
+      }
+    };
+  }
 
   /**
    * @return the plugin configuration message handler.
@@ -197,24 +242,33 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
         LOG.info(format("[TestNG Plugin] handle scan test-case with message: %s", request.requestBody()));
         List<TestCase> testCases = null;
 
+				TestNGClassScanner classScanner = null;
         try {
           TestScript testScript = new TestScript().fromJson(new JsonObject(request.requestBody()));
 
-          String workingDirectory = FilenameUtils.normalizeNoEndSeparator(testScript.getTestDirectory());
+          String workingDirectory = normalizeWithEndSeparator(testScript.getTestDirectory());
           File templateFile = new File(workingDirectory, UUID.randomUUID().toString());
-          TestNGClassScanner classScanner = new TestNGClassScanner(templateFile);
+          classScanner = new TestNGClassScanner(templateFile);
 
           testCases = classScanner.scan(
             workingDirectory,
             testScript.getIncludePattern(),
             testScript.getExcludePattern(),
-            FilenameUtils.normalizeNoEndSeparator(testScript.getLibraryDirectory()),
+            normalizeWithEndSeparator(testScript.getLibraryDirectory()),
             testScript.isScanLibrary()
           );
         } catch (JsonException jex) {
           // ignore this exception.
         } catch (Exception e) {
           LOG.warn(format("[TestNG Plugin] Error occurs during scan TestNG test class. message: %s", e.getMessage()));
+        } finally {
+					try {
+        		classScanner.cleanScanner();
+					} catch (Exception e) {
+						LOG.warn(format("[TestNG Plugin] Error occurred during cleaning scan resource. Message: %s", e.getMessage()), e);
+					}
+					
+					LOG.info(format("[TestNG Plugin] scan test-case done."));
         }
 
         JsonArray jaTestCase = new JsonArray();
@@ -228,5 +282,15 @@ public class TestNgPlugin extends AbstractQAutomationPlugin {
         return success(jaTestCase.toString());
       }
     };
+  }
+	
+	private static String normalizeWithEndSeparator(String filename) {
+    String normalize = FilenameUtils.normalizeNoEndSeparator(filename);
+    File file = new File(filename);
+    if (file.isDirectory()) {
+      return (normalize != null && normalize.trim().length() > 0) ? normalize.trim() + File.separator : "";
+    } else {
+      return normalize;
+    }
   }
 }

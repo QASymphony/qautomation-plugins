@@ -68,7 +68,7 @@ public class TestNgCommandBuilder {
    * @param environmentVariables the given environment variable.
    */
   public void cleanupEnvironment(BuildCommandRequest commandRequest, Map<String, String> environmentVariables) {
-    if (environmentVariables == null || environmentVariables.isEmpty()) return;
+    if (environmentVariables == null) return;
 
     File templateFile = getTemplateFile(commandRequest, environmentVariables);
     if (templateFile != null) {
